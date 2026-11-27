@@ -1,79 +1,63 @@
-# Archimesh
+# ArchiMesh
 
-A foundation for an agent-native enterprise architecture knowledge platform.
-This repository currently contains only a runnable application skeleton.
+ArchiMesh is an enterprise architecture knowledge platform in development. Its goal is to give architects, analysts, and development agents a shared model of business capabilities, applications, data, and the relationships between them. The planned repository stores canonical Markdown and its searchable projections in PostgreSQL. Git supports interchange and collaboration.
 
-## Prerequisites
+**Current status.** This branch provides the engineering foundation and a runnable skeleton. You can start the web UI, check its database connection, and inspect the API schema. Enterprise modeling, knowledge editing, and access controls are planned in the [v0.1 specification](docs/plans/README.md). Use synthetic data and keep the application local.
 
-- Node.js 22.13 or newer in the Node 22 LTS line, with Corepack.
-- Docker and Docker Compose.
-- pnpm is pinned by `packageManager`; enable its shim with `corepack enable`.
+## Run locally on Windows
 
-## Run locally
+Use Node.js 22 LTS, Corepack, and PostgreSQL 16. The repository pins pnpm. Follow the [native PostgreSQL setup](docs/development/native-postgresql.md) to locate PostgreSQL or extract verified portable binaries. Then run these commands in PowerShell from the repository root.
 
-From the repository root:
-
-```sh
-cp .env.example .env
-docker compose up -d --wait
-set -a; . ./.env; set +a
-pnpm install --frozen-lockfile
-pnpm db:migrate
-pnpm dev
+```powershell
+corepack pnpm install --frozen-lockfile
+corepack pnpm db:local setup
+corepack pnpm db:migrate
+corepack pnpm dev
 ```
 
-Open <http://localhost:5173>. Vite proxies `/api` to Fastify on port 3000.
-Both applications reload when their source changes. The shared contracts package
-is built when `pnpm dev` starts; restart it after changing a contract.
-The API health check is at <http://localhost:3000/api/health>, and the OpenAPI
-document is at <http://localhost:3000/api/openapi.json>. Health returns HTTP
-503 if PostgreSQL cannot be reached.
+Open <http://127.0.0.1:5173>. The page should show a connected database. Vite proxies the API to Fastify on port 3000. The [health endpoint](http://127.0.0.1:3000/api/health) returns HTTP 503 if PostgreSQL is unavailable. The [OpenAPI document](http://127.0.0.1:3000/api/openapi.json) lists the API contract.
 
-`.env.example` and Compose contain **local development-only** database
-credentials. Never use them in a deployed environment. The shell command above
-exports `.env` for the current shell; the application does not load it
-automatically. Azurite exposes the Blob endpoint on localhost port 10000; the
-application does not yet use it. `docker compose down` stops the services
-without deleting data; `docker compose down -v` also deletes their volumes.
+Press Ctrl+C to stop the app. Run `corepack pnpm db:local stop` to stop PostgreSQL and keep the data. For later sessions, run `corepack pnpm db:local start` followed by `corepack pnpm dev`. Run `corepack pnpm db:migrate` when the checked-out branch adds migrations. Restart the dev command after editing shared API contracts so it rebuilds them.
 
-## Checks
+The [native setup guide](docs/development/native-postgresql.md) covers macOS, existing local installations, and troubleshooting.
 
-```sh
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm build
-pnpm test
-pnpm exec playwright install --with-deps chromium
-pnpm test:e2e
+## Verify changes
+
+Install Playwright's Chromium once per Playwright version. Browser tests start their own API and web server on ports 3001 and 5174.
+
+```powershell
+corepack pnpm exec playwright install chromium
+corepack pnpm verify
+corepack pnpm test:db
+corepack pnpm test:e2e
 ```
 
-The browser tests require the local database and exported environment above.
-`pnpm format` formats supported files. CI runs these checks and builds the image.
+`verify` runs formatting, lint, type checks, unit tests, and the build. The database and browser tests require a running local PostgreSQL instance. Browser tests use a separate database and migrate it before exercising the UI. See [Contributing](CONTRIBUTING.md) for the individual checks.
 
-## Migrations and container
+## Optional Docker workflow
 
-Kysely runs migrations in `apps/server/migrations` in filename order, recording
-their history in PostgreSQL. There are no application tables yet. Add
-uniquely named `.js` ES modules exporting an async `up(db)` function and,
-where appropriate, `down(db)`. Use JavaScript so the same migration runs via
-the development command and the compiled production image. Run
-`pnpm db:migrate` from the repository root with `DATABASE_URL` exported.
-Never edit a migration already applied to a shared database.
+For a fresh checkout using Compose, copy `.env.example` to `.env`. Keep a native setup's existing `.env` and use a separate checkout if you want to switch between the two workflows.
 
-Build the image with `docker build -t archimesh .`. It serves the compiled
-frontend and API on port 3000. Supply `DATABASE_URL` and any required
-PostgreSQL connection environment securely at runtime. Run migrations as a
-separate controlled deployment step using `node dist/migrate.js` in the
-container's default working directory; migrations are not run on startup.
-The image is not an authenticated or production-ready deployment.
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --wait postgres
+corepack pnpm install --frozen-lockfile
+corepack pnpm db:migrate
+corepack pnpm dev
+```
 
-## Scope and design
+Press Ctrl+C and run `docker compose stop postgres` to stop services and keep the database volume. Start Azurite separately with `docker compose up -d azurite` if working on a feature that needs Blob Storage.
 
-See [architecture](docs/architecture/overview.md),
-[ADR 0001](docs/adr/0001-foundation.md), and the
-[Azure deployment direction](infra/azure/README.md). PostgreSQL is intended to
-be authoritative for canonical Markdown and indexed metadata; Git is intended
-for interchange, not primary storage. OKF, the metamodel, agent interfaces,
-authentication, authorization, diagrams, and cloud infrastructure are not yet
-implemented. No Azure resources are provisioned by this repository.
+Build the application image with `docker build -t archimesh .`. It serves the compiled web UI and API on port 3000. Supply the database configuration through the deployment environment. Run `node dist/migrate.js` in the container's default working directory as a separate migration step before starting the service.
+
+## Repository layout
+
+| Path                 | Responsibility                                           |
+| -------------------- | -------------------------------------------------------- |
+| `apps/web`           | React and Vite web application                           |
+| `apps/server`        | Fastify API, PostgreSQL access, and Kysely migrations    |
+| `packages/contracts` | Shared Zod contracts                                     |
+| `packages/core`      | Framework-independent domain logic as features are added |
+| `infra/azure`        | Future Azure deployment design                           |
+
+See the [architecture overview](docs/architecture/overview.md), [ADR 0001](docs/adr/0001-foundation.md), [engineering workflow](docs/development/workflow.md), and [Azure deployment direction](infra/azure/README.md). ArchiMesh is licensed under [GPLv3](LICENSE).

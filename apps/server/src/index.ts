@@ -1,6 +1,8 @@
+import { loadProjectEnv } from './env.js';
 import { createApp } from './app.js';
 import { checkDatabase, createDatabase } from './db.js';
 
+loadProjectEnv();
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
 
@@ -9,7 +11,12 @@ const app = await createApp(() => checkDatabase(db), process.env.STATIC_DIR);
 app.addHook('onClose', async () => db.destroy());
 
 try {
-  await app.listen({ port: Number(process.env.PORT ?? 3000), host: '0.0.0.0' });
+  await app.listen({
+    port: Number(process.env.PORT ?? 3000),
+    host:
+      process.env.HOST ??
+      (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),
+  });
 } catch (error) {
   app.log.error(error);
   await app.close();

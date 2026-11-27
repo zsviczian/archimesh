@@ -5,18 +5,22 @@
   "version": "0.0.0",
   "packageManager": "pnpm@10.34.9",
   "engines": {
-    "node": ">=22 <23"
+    "node": "\u003e=22 \u003c23"
   },
   "scripts": {
-    "dev": "pnpm --filter @archimesh/contracts build && pnpm --parallel --filter @archimesh/server --filter @archimesh/web dev",
-    "build": "pnpm -r build",
-    "typecheck": "pnpm --filter @archimesh/contracts build && pnpm -r --if-present typecheck",
+    "dev": "corepack pnpm --filter @archimesh/contracts build && corepack pnpm --parallel --filter @archimesh/server --filter @archimesh/web dev",
+    "build": "corepack pnpm -r build",
+    "typecheck": "corepack pnpm --filter @archimesh/contracts build && corepack pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm --filter @archimesh/contracts build && pnpm -r --if-present test",
+    "test": "corepack pnpm --filter @archimesh/contracts build && corepack pnpm -r --if-present test",
     "test:e2e": "playwright test",
-    "db:migrate": "pnpm --filter @archimesh/server migrate"
+    "db:migrate": "corepack pnpm --filter @archimesh/server migrate",
+    "db:local": "node scripts/local-db.mjs",
+    "db:migrate:test": "corepack pnpm --filter @archimesh/server migrate --test",
+    "test:db": "corepack pnpm --filter @archimesh/server test:db",
+    "verify": "corepack pnpm format:check && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build && corepack pnpm test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
