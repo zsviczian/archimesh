@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import { createDatabase } from './db.js';
-import { loadProjectEnv, testDatabaseUrls } from './env.js';
+import { loadProjectEnv, localDatabaseUrl, testDatabaseUrls } from './env.js';
 
 loadProjectEnv();
 const { runtime, migration } = testDatabaseUrls();
@@ -16,6 +16,7 @@ for (const [expected, appUrl, ownerUrl] of pairs) {
     ['runtime', appUrl],
     ['migration', ownerUrl],
   ] as const) {
+    localDatabaseUrl(url, expected);
     const db = createDatabase(url);
     try {
       const result = await sql<{

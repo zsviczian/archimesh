@@ -8,18 +8,22 @@
     "node": "\u003e=22 \u003c23"
   },
   "scripts": {
-    "dev": "corepack pnpm --filter @archimesh/contracts build && corepack pnpm --parallel --filter @archimesh/server --filter @archimesh/web dev",
+    "dev": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm --parallel --filter @archimesh/server --filter @archimesh/web dev",
     "build": "corepack pnpm -r build",
-    "typecheck": "corepack pnpm --filter @archimesh/contracts build && corepack pnpm -r --if-present typecheck",
+    "typecheck": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "corepack pnpm --filter @archimesh/contracts build && corepack pnpm -r --if-present test",
+    "test": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "db:migrate": "corepack pnpm --filter @archimesh/server migrate",
     "db:local": "node scripts/local-db.mjs",
+    "db:seed": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm --filter @archimesh/server seed",
+    "db:seed:test": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm --filter @archimesh/server seed --test",
     "db:migrate:test": "corepack pnpm --filter @archimesh/server migrate --test",
-    "test:db": "corepack pnpm --filter @archimesh/server test:db",
+    "test:db": "corepack pnpm db:migrate:test && corepack pnpm db:seed:test && corepack pnpm --filter @archimesh/server test:db",
+    "model:cli": "corepack pnpm --filter @archimesh/server model:cli",
+    "model:mcp": "corepack pnpm --filter @archimesh/server model:mcp",
     "verify": "corepack pnpm format:check && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm build && corepack pnpm test"
   },
   "devDependencies": {

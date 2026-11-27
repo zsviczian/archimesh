@@ -12,7 +12,8 @@ export default defineConfig({
   testDir: './tests',
   use: { baseURL: 'http://127.0.0.1:5174', ...devices['Desktop Chrome'] },
   webServer: {
-    command: 'corepack pnpm db:migrate:test && corepack pnpm dev',
+    command:
+      'corepack pnpm db:migrate:test && corepack pnpm db:seed:test && corepack pnpm dev',
     url: 'http://127.0.0.1:5174/api/health',
     reuseExistingServer: false,
     timeout: 120_000,

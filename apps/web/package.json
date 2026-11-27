@@ -12,7 +12,9 @@
     "@archimesh/contracts": "workspace:*",
     "@tanstack/react-query": "5.108.4",
     "react": "19.2.9",
-    "react-dom": "19.2.9"
+    "react-dom": "19.2.9",
+    "@xyflow/react": "13.0.3",
+    "react-markdown": "10.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.5",
