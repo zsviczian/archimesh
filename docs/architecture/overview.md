@@ -1,24 +1,28 @@
-# Architecture overview
+# ArchiMesh architecture
 
-Archimesh is a TypeScript modular monolith. `apps/web` is the React/Vite UI;
-`apps/server` is the Fastify REST API and database boundary.
-`packages/contracts` contains shared validated API contracts, and
-`packages/core` is reserved for domain logic when it is needed. The health
-route checks PostgreSQL and exposes an OpenAPI document. The browser uses
-TanStack Query and a same-origin API; Vite proxies that API during development.
+ArchiMesh is a modular TypeScript monolith. The React workbench and local CLI
+and MCP adapters call the same Fastify API. PostgreSQL stores immutable OKF
+Markdown and transactionally maintained SQL projections.
 
-The intended knowledge repository uses PostgreSQL as the authoritative store
-for canonical Markdown with YAML frontmatter, indexed metadata and relationships.
-Google Open Knowledge Format (OKF) is the intended interchange representation;
-Git is for distribution and interchange rather than the primary database.
-These representations and synchronization are not implemented yet.
+| Boundary             | Responsibility                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| `packages/core`      | Pinned OKF profile, safe YAML, metamodel and endpoint rules                          |
+| `packages/contracts` | Zod wire types and command validation                                                |
+| `apps/server`        | Local identity gate, application commands, queries, migrations and projection writes |
+| `apps/web`           | Catalog, Markdown editing, graph and saved views                                     |
+| `infra`              | Local Compose and planned Azure deployment                                           |
 
-The design targets hundreds of thousands of architectural objects and
-relationships and up to 1,000 users. Indexing, pagination, concurrency,
-data isolation, and performance testing will be required as real features are
-added; the skeleton makes no scalability guarantees.
+Each model command establishes identity and scope in a transaction, validates
+the proposed graph and atomically commits revisions and projections.
+Relationships have their own stable IDs, lifecycle, ownership and history.
+Saved layouts use separate view documents. The demo scenario overlay stores
+a pinned baseline and proposed changes alongside the actual model.
 
-Authentication, authorization and PostgreSQL RLS, temporal modeling, metamodel
-validation, diagrams, Markdown editing, agent interfaces, attachment storage,
-and reporting are future work. The current API is unauthenticated and must not
-be exposed to untrusted users.
+The runtime PostgreSQL role is separate from the migration role. Row policies
+apply at query time and the server restricts typed references across scopes.
+The UI disables active HTML and external media when displaying Markdown.
+CLI and MCP use loopback HTTP and a configured demo identity.
+
+See [ADR 0001](../adr/0001-foundation.md) for the foundational stack,
+[ADR 0002](../adr/0002-canonical-knowledge-and-scope.md) for model semantics and
+the [Azure direction](../../infra/azure/README.md) for future deployment.

@@ -55,6 +55,7 @@ corepack pnpm install --frozen-lockfile
 corepack pnpm db:local setup
 corepack pnpm db:local status
 corepack pnpm db:migrate
+corepack pnpm db:seed
 corepack pnpm dev
 ```
 

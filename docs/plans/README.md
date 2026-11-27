@@ -2,11 +2,12 @@
 
 Work orders record intent. A linked execution record captures progress and
 survives context compaction or handoff. Update it after each meaningful
-checkpoint and before switching branches. A fresh session should be able to
-resume from the evidence and next action.
+checkpoint and before switching branches.
 
-- [Engineering foundation](01-engineering-foundation.md)
-- [Foundation execution record](../development/foundation-execution.md)
+| Work order                                             | Relevant evidence                                                                                  |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| [Engineering foundation](01-engineering-foundation.md) | [Foundation execution record](../development/foundation-execution.md)                              |
+| [ArchiMesh v0.1](02-archimesh-v0.1.md)                 | [Execution record](../development/v0.1-execution.md) and [handoff](../development/v0.1-handoff.md) |
 
 ## Execution record outline
 

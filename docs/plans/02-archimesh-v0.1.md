@@ -1,6 +1,6 @@
 # Work order 02 — ArchiMesh v0.1 and product architecture
 
-Status: queued; implementation not yet complete. Depends on work order 01 and PR #2. This is the specification for the first local usable release and the longer-term product direction. It is not a claim that all features are implemented.
+Status: local P0 and selected P1 implemented. See the [handoff](../development/v0.1-handoff.md) for evidence and deferred roadmap. Depends on work order 01 and PR #2. This is the specification for the first local usable release and the longer-term product direction. It is not a claim that all features are implemented.
 
 ## Vision and scale
 
@@ -55,14 +55,16 @@ Markdown is untrusted: render sanitized HTML/links; safe parsing, resource limit
 Desktop browser UI inspired by Obsidian: navigation/catalogs/projects/search on left, central tab/workspace for graph/table/object, properties/relationships/validation/history on right. Calm high-density professional visual language, dark/light, keyboard-friendly and accessible; no oversized dashboards or decorative styling. Stable object URLs, linkable views and direct drill-through from all representations.
 
 Three modes over the same semantic model:
+
 - Explore: K-Plex-inspired focus-and-neighborhood navigation, typed relationship lenses, groups, inbound/outbound, navigation history, bounded expansion. Never render 100k nodes at once.
 - Model: React Flow semantic view editor, reusable existing object nodes, typed edges, manual positions, auto layout (ELK when useful). Moving/removing a shape affects the view only; rename or delete semantic object only via explicit command. Save view layout separately from model. Diagram edges reference first-class relationship identities, and opening an edge opens its document.
 - Analyze: Bases-like metadata table and saved filters, sort/group, computed values, graph predicates, matrices, reports and eventually dashboards. Constrained typed queries mapped to parameterized SQL; no arbitrary SQL/JS. Permission-aware paging, limits and result context.
 
 Views have ID, viewpoint, purpose, audience, element/edge references, optional selection query, layout/style and revision/scenario. Viewpoint definitions constrain element/relationship types, mandatory coverage and validation, default visual conventions, deliverable requirements. Implement two initial viewpoints:
+
 1. Solution Context Diagram: project-impacted application instances and existing/proposed/modified/retired integrations, with clear legend. Project is a modeled context, not a duplicate copy of catalog entries.
 2. Application Instance Business Object Map: typed create/master/read/update edges and matrix, with scope where applicable.
-Both editable/discoverable; image/clipboard export desirable. Other eventual modeling: pragmatic C4, UML class/component/sequence/activity/state/deployment and BPMN 2.0 using bpmn-js; optional ArchiMate adapter; not universal standards conformance. Excalidraw for sketches/wireframes only, Mermaid as textual rendering/export, CALM/Groma/LikeC4 as interoperable references, not competing sources of truth.
+   Both editable/discoverable; image/clipboard export desirable. Other eventual modeling: pragmatic C4, UML class/component/sequence/activity/state/deployment and BPMN 2.0 using bpmn-js; optional ArchiMate adapter; not universal standards conformance. Excalidraw for sketches/wireframes only, Mermaid as textual rendering/export, CALM/Groma/LikeC4 as interoperable references, not competing sources of truth.
 
 ## 6. Agent-native platform
 
