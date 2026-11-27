@@ -1,0 +1,25 @@
+{
+  "name": "@archimesh/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@archimesh/contracts": "workspace:*",
+    "@tanstack/react-query": "5.108.4",
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "4.7.0",
+    "tailwindcss": "4.3.5",
+    "vite": "6.4.6"
+  }
+}
