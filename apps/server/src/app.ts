@@ -28,9 +28,12 @@ export async function createApp(
         await checkDatabase();
         return healthSchema.parse({ status: 'ok', database: 'connected' });
       } catch {
-        return reply
-          .code(503)
-          .send(healthSchema.parse({ status: 'unavailable', database: 'unavailable' }));
+        return reply.code(503).send(
+          healthSchema.parse({
+            status: 'unavailable',
+            database: 'unavailable',
+          }),
+        );
       }
     },
   );
