@@ -1,13 +1,14 @@
 {
   "name": "archimesh",
   "private": true,
+  "type": "module",
   "version": "0.0.0",
   "packageManager": "pnpm@10.34.9",
   "engines": {
     "node": ">=22 <23"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @archimesh/server --filter @archimesh/web dev",
+    "dev": "pnpm --filter @archimesh/contracts build && pnpm --parallel --filter @archimesh/server --filter @archimesh/web dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter @archimesh/contracts build && pnpm -r --if-present typecheck",
     "lint": "eslint .",
