@@ -9,36 +9,89 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16.10-alpine
+        image: postgres:16.16-alpine
         env:
-          POSTGRES_DB: archimesh
-          POSTGRES_USER: archimesh
-          POSTGRES_PASSWORD: local-dev-only
+          POSTGRES_PASSWORD: ci-admin
         ports:
-          - 5432:5432
+          - '127.0.0.1:5432:5432'
         options: >-
-          --health-cmd "pg_isready -U archimesh -d archimesh"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://archimesh@localhost:5432/archimesh
-      PGPASSWORD: local-dev-only
+      DATABASE_URL: postgresql://archimesh_app:ci-dev-app@127.0.0.1:5432/archimesh
+      MIGRATION_DATABASE_URL: postgresql://archimesh_owner:ci-dev-owner@127.0.0.1:5432/archimesh
+      TEST_DATABASE_URL: postgresql://archimesh_test_app:ci-test-app@127.0.0.1:5432/archimesh_test
+      TEST_MIGRATION_DATABASE_URL: postgresql://archimesh_test_owner:ci-test-owner@127.0.0.1:5432/archimesh_test
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22.23.1
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm build
-      - run: pnpm test
+      - run: pnpm verify
+      - name: Provision isolated CI databases
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker exec -i -e PGPASSWORD=ci-admin "$POSTGRES_CONTAINER" \
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres <<'SQL'
+          CREATE ROLE archimesh_owner LOGIN PASSWORD 'ci-dev-owner';
+          CREATE ROLE archimesh_app LOGIN PASSWORD 'ci-dev-app';
+          CREATE ROLE archimesh_test_owner LOGIN PASSWORD 'ci-test-owner';
+          CREATE ROLE archimesh_test_app LOGIN PASSWORD 'ci-test-app';
+          CREATE DATABASE archimesh OWNER archimesh_owner;
+          CREATE DATABASE archimesh_test OWNER archimesh_test_owner;
+          REVOKE ALL ON DATABASE archimesh, archimesh_test FROM PUBLIC;
+          GRANT CONNECT ON DATABASE archimesh TO archimesh_app;
+          GRANT CONNECT ON DATABASE archimesh_test TO archimesh_test_app;
+          SQL
       - run: pnpm db:migrate
+      - run: pnpm test:db
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - run: docker build -t archimesh .
+
+  windows:
+    name: Native Windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.23.1
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - name: Download and verify portable PostgreSQL 16
+        shell: pwsh
+        run: |
+          $release = 'https://get.enterprisedb.com/postgresql/postgresql-16.16-2-windows-x64-binaries.zip'
+          # Published in the EDB .sha256 file for this exact archive.
+          $checksum = 'add1de261b150e6923266abee293f05050795e73f5356158aee4221a2170c073'
+          $archive = Join-Path $env:RUNNER_TEMP 'archimesh-postgresql.zip'
+          curl.exe --fail --silent --show-error --location --retry 3 --output $archive $release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $checksum) {
+            throw 'EDB archive failed SHA-256 verification'
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath .local/postgresql
+      - run: pnpm db:local setup
+      - run: pnpm db:local status
+      - run: pnpm db:migrate
+      - run: pnpm test:db
+      - run: pnpm exec playwright install chromium
+      - run: pnpm test:e2e
+      - name: Stop PostgreSQL
+        if: ${{ always() && hashFiles('.local/postgresql/pgsql/bin/pg_ctl.exe') != '' }}
+        run: pnpm db:local stop

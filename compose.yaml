@@ -1,16 +1,17 @@
 services:
   postgres:
-    image: postgres:16.10-alpine
+    image: postgres:16.16-alpine
     environment:
-      POSTGRES_DB: archimesh
-      POSTGRES_USER: archimesh
+      POSTGRES_DB: postgres
+      POSTGRES_USER: archimesh_compose_admin
       POSTGRES_PASSWORD: local-dev-only
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infra/local/compose-init.sql:/docker-entrypoint-initdb.d/archimesh.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U archimesh -d archimesh']
+      test: ['CMD-SHELL', 'pg_isready -U archimesh_compose_admin -d postgres']
       interval: 5s
       timeout: 5s
       retries: 10
