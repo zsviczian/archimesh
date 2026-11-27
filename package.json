@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm --filter @archimesh/contracts build && pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "db:migrate": "pnpm --filter @archimesh/server migrate"
   },
