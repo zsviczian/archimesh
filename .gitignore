@@ -5,3 +5,6 @@ dist/
 playwright-report/
 test-results/
 coverage/
+/.local/
+.env.*
+!.env.example

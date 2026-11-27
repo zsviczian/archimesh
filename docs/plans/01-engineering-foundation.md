@@ -1,6 +1,6 @@
 # Work order 01 — Engineering foundation for Codex
 
-Status: queued; the implementation is not yet complete.
+Status: implemented. See the [execution record](../development/foundation-execution.md) for verification and limitations.
 
 ## Objective
 
