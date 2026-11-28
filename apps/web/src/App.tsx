@@ -1,11 +1,12 @@
 import {
   identitySchema,
   uuidSchema,
+  type BrowserAuthStatus,
   type DemoIdentity,
   type Metamodel,
   type ModelSession,
 } from '@archimesh/contracts';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
   useDeferredValue,
@@ -13,7 +14,16 @@ import {
   useRef,
   useState,
 } from 'react';
-import { health, metamodel, modelKey, session } from './api';
+import {
+  browserAuth,
+  browserAuthKey,
+  health,
+  metamodel,
+  modelKey,
+  session,
+  signOut,
+} from './api';
+import { SignIn } from './SignIn';
 import { Catalog } from './Catalog';
 import { Editor, type EditorTarget } from './Editor';
 import { ObjectWorkspace } from './ObjectWorkspace';
@@ -70,6 +80,18 @@ export default function App() {
     localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
 
+  const auth = useQuery({
+    queryKey: browserAuthKey,
+    queryFn: ({ signal }) => browserAuth(signal),
+    refetchInterval: 30_000,
+    retry: false,
+  });
+  function applyAccess(value: BrowserAuthStatus) {
+    queryClient.removeQueries({ queryKey: ['model'] });
+    queryClient.setQueryData(browserAuthKey, value);
+  }
+  const logout = useMutation({ mutationFn: signOut, onSuccess: applyAccess });
+
   function changeIdentity(next: DemoIdentity) {
     if (next === identity) return;
     queryClient.removeQueries({ queryKey: modelKey(identity) });
@@ -77,11 +99,20 @@ export default function App() {
     setIdentity(next);
   }
 
+  const isDemo = auth.data?.mode === 'demo';
+  const active = isDemo ? identity : auth.data?.identity;
+  if (!active) {
+    const mode = auth.data?.mode ?? (auth.isError ? 'unavailable' : 'loading');
+    return <SignIn mode={mode} onSignIn={applyAccess} />;
+  }
+
   return (
     <Workbench
-      key={identity}
-      identity={identity}
-      onIdentity={changeIdentity}
+      key={active}
+      identity={active}
+      onIdentity={isDemo ? changeIdentity : undefined}
+      onSignOut={isDemo ? undefined : () => logout.mutate()}
+      signingOut={logout.isPending}
       theme={theme}
       onTheme={() =>
         setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
@@ -95,13 +126,17 @@ export default function App() {
 function Workbench({
   identity,
   onIdentity,
+  onSignOut,
+  signingOut,
   theme,
   onTheme,
   path,
   navigate,
 }: {
   identity: DemoIdentity;
-  onIdentity: (identity: DemoIdentity) => void;
+  onIdentity?: (identity: DemoIdentity) => void;
+  onSignOut?: () => void;
+  signingOut: boolean;
   theme: 'dark' | 'light';
   onTheme: () => void;
   path: string;
@@ -245,22 +280,36 @@ function Workbench({
             <span aria-hidden="true" />
             {service}
           </div>
-          <label className="identity-control">
-            <span className="sr-only">Local demo identity</span>
-            <select
-              value={identity}
-              onChange={(event) => {
-                const parsed = identitySchema.safeParse(event.target.value);
-                if (parsed.success) onIdentity(parsed.data);
-              }}
-            >
-              {Object.entries(identities).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {onIdentity ? (
+            <label className="identity-control">
+              <span className="sr-only">Local demo identity</span>
+              <select
+                value={identity}
+                onChange={(event) => {
+                  const parsed = identitySchema.safeParse(event.target.value);
+                  if (parsed.success) onIdentity(parsed.data);
+                }}
+              >
+                {Object.entries(identities).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <div className="network-account">
+              <span>{identities[identity]}</span>
+              <button
+                type="button"
+                className="button"
+                onClick={onSignOut}
+                disabled={signingOut}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
           <button
             className="icon-button theme-toggle"
             type="button"

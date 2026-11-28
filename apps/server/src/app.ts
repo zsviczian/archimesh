@@ -1,3 +1,5 @@
+import type { ServerOptions } from 'node:https';
+import { loopbackAccess, type BrowserAccess } from './auth/access.js';
 import { registerModelRoutes } from './model/routes.js';
 import type { Db } from './model/store.js';
 import Fastify from 'fastify';
@@ -13,10 +15,19 @@ import { z } from 'zod';
 export async function createApp(
   checkDatabase: () => Promise<void>,
   staticDir?: string,
-  model?: { db: Db; localDemo: boolean },
+  model?: { db: Db; localDemo: boolean; access?: BrowserAccess },
+  tls?: ServerOptions,
 ) {
   const app = Fastify({
-    logger: true,
+    logger: {
+      serializers: {
+        req: (request) => ({
+          method: request.method,
+          url: request.url?.split('?', 1)[0],
+        }),
+      },
+    },
+    ...(tls ? { https: tls } : {}),
     bodyLimit: maxModelPayloadBytes,
     ajv: { customOptions: { removeAdditional: false } },
   });
@@ -27,6 +38,11 @@ export async function createApp(
       components: {
         securitySchemes: {
           localDemo: { type: 'apiKey', in: 'header', name: identityHeader },
+          browserSession: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: '__Host-archimesh-session',
+          },
         },
       },
     },
@@ -56,7 +72,9 @@ export async function createApp(
     },
   );
   app.get('/api/openapi.json', async () => app.swagger());
-  if (model) await registerModelRoutes(app, model.db, model.localDemo);
+  const access = model?.access ?? loopbackAccess(model?.localDemo ?? false);
+  access.register(app);
+  if (model) await registerModelRoutes(app, model.db, access);
   if (staticDir) {
     await app.register(fastifyStatic, { root: staticDir });
     app.setNotFoundHandler((request, reply) => {

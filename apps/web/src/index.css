@@ -1483,3 +1483,39 @@ button.align-start {
     border-left: 0;
   }
 }
+
+.sign-in-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.sign-in-card {
+  width: min(100%, 24rem);
+  padding: 1.75rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 0.75rem;
+}
+
+.sign-in-card h1 {
+  margin: 0.75rem 0;
+  font-size: 1.6rem;
+  font-weight: 650;
+}
+
+.sign-in-card form {
+  display: grid;
+  gap: 1rem;
+}
+
+.sign-in-card .button {
+  margin-top: 0.5rem;
+}
+
+.network-account {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  white-space: nowrap;
+}

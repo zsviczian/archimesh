@@ -18,6 +18,8 @@
     "test:e2e": "playwright test",
     "db:migrate": "corepack pnpm --filter @archimesh/server migrate",
     "db:local": "node scripts/local-db.mjs",
+    "lan:setup": "node scripts/lan-setup.mjs",
+    "lan:start": "corepack pnpm build && node apps/server/dist/index.js --lan",
     "db:seed": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm --filter @archimesh/server seed",
     "db:seed:test": "corepack pnpm --filter @archimesh/contracts --filter @archimesh/core build && corepack pnpm --filter @archimesh/server seed --test",
     "db:migrate:test": "corepack pnpm --filter @archimesh/server migrate --test",

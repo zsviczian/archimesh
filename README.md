@@ -42,6 +42,13 @@ The [native setup guide](docs/development/native-postgresql.md) also covers
 macOS, an existing dedicated PostgreSQL installation, and troubleshooting.
 The documented macOS path shares the same Node scripts.
 
+## LAN and organizational sign-in
+
+For a second PC on your local subnet, follow the [LAN setup](docs/development/lan-and-entra.md).
+The native server offers HTTPS sign-in with a generated local passphrase.
+Microsoft Entra ID has a separate sign-in mode. The same guide explains the
+tenant configuration and what the local OIDC tests cover.
+
 ## Verify changes
 
 ```powershell
@@ -69,8 +76,7 @@ Azurite remains optional. The application container builds with
 
 ## Project status
 
-This release is a **local synthetic-data demo**. Production identity
-integration and enterprise governance are future work. The deployed mode
+This release is a **local synthetic-data demo**. Live Entra tenant acceptance and enterprise governance remain future work. The deployed mode
 denies the demo identity mechanism. The API description is at
 `/api/openapi.json`.
 

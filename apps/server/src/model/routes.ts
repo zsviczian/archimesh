@@ -1,3 +1,4 @@
+import type { BrowserAccess } from '../auth/access.js';
 import {
   exportBundle,
   exportFilter,
@@ -28,8 +29,6 @@ import {
   scenarioDetailSchema,
   scenarioSummarySchema,
   validationResultSchema,
-  identityHeader,
-  identitySchema,
   positionSchema,
   uuidSchema,
 } from '@archimesh/contracts';
@@ -68,25 +67,6 @@ const layoutSchema = z
   .strict()
   .refine((layout) => Object.keys(layout.positions).length <= 80);
 
-const localNames = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
-const localAddresses = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
-
-function actor(request: FastifyRequest, enabled: boolean) {
-  if (
-    !enabled ||
-    process.env.NODE_ENV === 'production' ||
-    !localNames.has(request.hostname.toLowerCase()) ||
-    !localAddresses.has(request.ip) ||
-    request.headers['sec-fetch-site'] === 'cross-site'
-  ) {
-    throw new ModelError(403, 'Local demo access is unavailable');
-  }
-  const identity = identitySchema.safeParse(request.headers[identityHeader]);
-  if (!identity.success)
-    throw new ModelError(401, 'Select a local demo identity');
-  return identity.data;
-}
-
 function handleModelError(
   error: Error,
   request: FastifyRequest,
@@ -122,13 +102,13 @@ function handleModelError(
 export async function registerModelRoutes(
   app: FastifyInstance,
   db: Db,
-  localDemo: boolean,
+  access: BrowserAccess,
 ) {
   await app.register(
     async (api) => {
       api.addHook('onRequest', async (request, reply) => {
         reply.header('cache-control', 'no-store');
-        actor(request, localDemo);
+        access.requireIdentity(request);
       });
       api.setErrorHandler(handleModelError);
 
@@ -138,11 +118,11 @@ export async function registerModelRoutes(
           schema: {
             summary: 'Get the active identity and accessible scopes',
             response: { 200: jsonSchema(sessionSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
-        async (request) => getSession(db, actor(request, localDemo)),
+        async (request) => getSession(db, access.requireIdentity(request)),
       );
 
       api.get(
@@ -151,7 +131,7 @@ export async function registerModelRoutes(
           schema: {
             summary: 'Get the supported object and relationship types',
             response: { 200: jsonSchema(metamodelSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
@@ -165,14 +145,14 @@ export async function registerModelRoutes(
             summary: 'Search accessible current or historical objects',
             querystring: jsonSchema(listQuery),
             response: { 200: jsonSchema(objectListSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
         async (request) =>
           listObjects(
             db,
-            actor(request, localDemo),
+            access.requireIdentity(request),
             input(listQuery, request.query),
           ),
       );
@@ -185,14 +165,14 @@ export async function registerModelRoutes(
             params: jsonSchema(objectParams),
             querystring: jsonSchema(revisionQuery),
             response: { 200: jsonSchema(modelObjectSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
         async (request) => {
           const { id } = input(objectParams, request.params);
           const { revision } = input(revisionQuery, request.query);
-          return getObject(db, actor(request, localDemo), id, revision);
+          return getObject(db, access.requireIdentity(request), id, revision);
         },
       );
 
@@ -203,13 +183,13 @@ export async function registerModelRoutes(
             summary: 'List an accessible object’s recorded revisions',
             params: jsonSchema(objectParams),
             response: { 200: jsonSchema(historySchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
         async (request) => {
           const { id } = input(objectParams, request.params);
-          return getHistory(db, actor(request, localDemo), id);
+          return getHistory(db, access.requireIdentity(request), id);
         },
       );
 
@@ -221,14 +201,19 @@ export async function registerModelRoutes(
             params: jsonSchema(objectParams),
             querystring: jsonSchema(neighborhoodQuery),
             response: { 200: jsonSchema(neighborhoodSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
         async (request) => {
           const { id } = input(objectParams, request.params);
           const { direction } = input(neighborhoodQuery, request.query);
-          return getNeighborhood(db, actor(request, localDemo), id, direction);
+          return getNeighborhood(
+            db,
+            access.requireIdentity(request),
+            id,
+            direction,
+          );
         },
       );
 
@@ -239,14 +224,14 @@ export async function registerModelRoutes(
             summary: 'Commit atomic changes under optimistic concurrency',
             body: jsonSchema(changesetSchema),
             response: { 201: jsonSchema(changesetResultSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
         async (request, reply) => {
           const result = await commitChangeset(
             db,
-            actor(request, localDemo),
+            access.requireIdentity(request),
             input(changesetSchema, request.body),
           );
           return reply.code(201).send(result);
@@ -260,14 +245,18 @@ export async function registerModelRoutes(
             summary: 'Validate a draft changeset without saving it',
             body: jsonSchema(changesetSchema),
             response: { 200: jsonSchema(validationResultSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Model'],
           },
         },
         async (request) => {
           const change = input(changesetSchema, request.body);
           try {
-            await validateChangeset(db, actor(request, localDemo), change);
+            await validateChangeset(
+              db,
+              access.requireIdentity(request),
+              change,
+            );
             return { valid: true, issues: [] };
           } catch (error) {
             if (
@@ -288,13 +277,13 @@ export async function registerModelRoutes(
             summary: 'Find accessible providers for a capability',
             params: jsonSchema(objectParams),
             response: { 200: jsonSchema(providerResultSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Reuse'],
           },
         },
         async (request) => {
           const { id } = input(objectParams, request.params);
-          return findProviders(db, actor(request, localDemo), id);
+          return findProviders(db, access.requireIdentity(request), id);
         },
       );
 
@@ -305,14 +294,14 @@ export async function registerModelRoutes(
             summary: 'Export an authorized revision-pinned OKF bundle',
             querystring: jsonSchema(exportFilter),
             response: { 200: jsonSchema(bundleSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Interchange'],
           },
         },
         async (request) =>
           exportBundle(
             db,
-            actor(request, localDemo),
+            access.requireIdentity(request),
             input(exportFilter, request.query),
           ),
       );
@@ -324,14 +313,14 @@ export async function registerModelRoutes(
             summary: 'Import new OKF objects atomically',
             body: jsonSchema(importRequest),
             response: { 201: jsonSchema(changesetResultSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Interchange'],
           },
         },
         async (request, reply) => {
           const result = await importBundle(
             db,
-            actor(request, localDemo),
+            access.requireIdentity(request),
             input(importRequest, request.body),
           );
           return reply.code(201).send(result);
@@ -344,11 +333,11 @@ export async function registerModelRoutes(
           schema: {
             summary: 'List accessible draft scenarios',
             response: { 200: jsonSchema(scenarioListSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Scenarios'],
           },
         },
-        async (request) => listScenarios(db, actor(request, localDemo)),
+        async (request) => listScenarios(db, access.requireIdentity(request)),
       );
 
       api.get(
@@ -358,13 +347,13 @@ export async function registerModelRoutes(
             summary: 'Read a pinned scenario and proposed semantic differences',
             params: jsonSchema(objectParams),
             response: { 200: jsonSchema(scenarioDetailSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Scenarios'],
           },
         },
         async (request) => {
           const { id } = input(objectParams, request.params);
-          return getScenario(db, actor(request, localDemo), id);
+          return getScenario(db, access.requireIdentity(request), id);
         },
       );
 
@@ -375,14 +364,14 @@ export async function registerModelRoutes(
             summary: 'Save a proposal without modifying the actual model',
             body: jsonSchema(scenarioRequest),
             response: { 201: jsonSchema(scenarioSummarySchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Scenarios'],
           },
         },
         async (request, reply) => {
           const scenario = await createScenario(
             db,
-            actor(request, localDemo),
+            access.requireIdentity(request),
             input(scenarioRequest, request.body),
           );
           return reply.code(201).send(scenario);
@@ -397,7 +386,7 @@ export async function registerModelRoutes(
             params: jsonSchema(objectParams),
             body: jsonSchema(layoutSchema),
             response: { 200: jsonSchema(changesetResultSchema) },
-            security: [{ localDemo: [] }],
+            security: [{ [access.modelSecurity]: [] }],
             tags: ['Views'],
           },
         },
@@ -409,7 +398,7 @@ export async function registerModelRoutes(
           );
           return saveLayout(
             db,
-            actor(request, localDemo),
+            access.requireIdentity(request),
             id,
             expectedRevisionId,
             requestId,

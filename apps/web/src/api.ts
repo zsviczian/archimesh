@@ -1,4 +1,5 @@
 import {
+  browserAuthSchema,
   changesetResultSchema,
   healthSchema,
   identityHeader,
@@ -44,8 +45,7 @@ export class ApiError extends Error {
 }
 
 function errorMessage(status: number, data: unknown): string {
-  if (status === 401)
-    return 'This identity is unavailable. Choose another local identity.';
+  if (status === 401) return 'Sign in or choose an available identity.';
   if (status === 403 || status === 404)
     return 'This object or action is unavailable.';
   if (status === 409)
@@ -83,6 +83,23 @@ async function request<T>(
   if (!response.ok)
     throw new ApiError(response.status, errorMessage(response.status, data));
   return schema.parse(data);
+}
+
+export const browserAuthKey = ['browser-auth'] as const;
+
+export function browserAuth(signal: AbortSignal) {
+  return request('/api/auth/status', browserAuthSchema, { signal });
+}
+
+export function signInWithPassphrase(password: string) {
+  return request('/api/auth/login', browserAuthSchema, {
+    method: 'POST',
+    body: { password },
+  });
+}
+
+export function signOut() {
+  return request('/api/auth/logout', browserAuthSchema, { method: 'POST' });
 }
 
 export function health(signal: AbortSignal) {

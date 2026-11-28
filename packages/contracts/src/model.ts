@@ -8,6 +8,12 @@ export const demoIdentities = [
   'contractor-integration',
 ] as const;
 export const identitySchema = z.enum(demoIdentities);
+export const browserAuthSchema = z.object({
+  mode: z.enum(['demo', 'lan', 'entra', 'disabled']),
+  identity: identitySchema.nullable(),
+});
+export type BrowserAuthStatus = z.infer<typeof browserAuthSchema>;
+
 export const uuidSchema = z.uuid();
 const keySchema = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/);
 const markdownSchema = z
