@@ -93,5 +93,5 @@ jobs:
       - run: pnpm exec playwright install chromium
       - run: pnpm test:e2e
       - name: Stop PostgreSQL
-        if: ${{ always() && hashFiles('.local/postgresql/pgsql/bin/pg_ctl.exe') != '' }}
+        if: ${{ always() && hashFiles('.local/pgdata/PG_VERSION') != '' }}
         run: pnpm db:local stop
